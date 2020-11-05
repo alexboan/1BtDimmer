@@ -1,211 +1,136 @@
-BL_TrafficLight2
-
 
 #include "mbed.h"
 
-InterruptIn botao(p10);
+InterrCimatIn button(p10);
 DigitalOut LedVermelho(p11);
-DigitalOut LedAmarelo(p12);
-DigitalOut LedAzul(p13);
+DigitalOut LedAzul(p12);
+PwmOut Intensidade(p13);
 
 Timeout timeout;
 Ticker ticker;
 
 enum STATE
 {
-  OFF, ALERT, Vermelho, Amarelo , Azul, ON, START
+  Baixo, Cima, Descer, MIN, Subir, MAX
 };
 
+void init();
+void PressButton();
+void ReleaseButton();
+void transitionStatePress();
+void ledBlink();
+
 int current_state;
-int previe_state;
-int manual_count;
-int stateButton
-;
-
-void transitionState();
-void Padrao();
-
-
-void MudarAzul()
-{
-    printf("Azul\n");
-    LedAzul = 1;
-    previe_state = current_state;
-    current_state = Azul;
-    timeout.attach(&transitionState, 20);
-}
-
-void MudarAmarelo()
-{
-    printf("Amarelo\n");
-    LedAmarelo = 1;
-    previe_state = current_state;
-    current_state = Amarelo;
-    timeout.attach(&transitionState, 4);
-}
-
-
-void MudarVermelho()
-{
-    printf("Vermelho\n");
-    LedVermelho = 1;
-    previe_state = current_state;
-    current_state = Vermelho;
-    timeout.attach(&transitionState, 10);
-}
-
-
-
-
-void MudarAmarelo1Hz(){
-    LedAmarelo = !LedAmarelo;
-    ticker.attach(MudarAmarelo1Hz, 0.5);
-}
-
-void MudarAlerta(){
-    printf("alert\n");
-    previe_state = current_state;
-    current_state = ALERT;
-    MudarAmarelo1Hz();
-}
-
-void Desligar(){
-    printf("off\n");
-    previe_state = current_state;
-    current_state = OFF;
-    Padrao();
-}
-
-void manual_count_fun(){
-    manual_count++;
-}
-
-void startCount()
-{
-    printf("Start count\n");
-    timeout.detach();
-    manual_count = 0;
-    ticker.attach(manual_count_fun,1);
-}
-
-void endCount()
-{
-    printf("End count\n");
-    ticker.detach();
-    stateButton
- = ON;
-    transitionState();
-}
+bool stateButton;
+float frequency;
 
 int main() {
-    current_state = START;
-    previe_state = START;
-    transitionState();
-    
-    botao.rise(&startCount);
-    botao.fall(&endCount);
-    
-    while(1) {
-        wait(1);
-        printf("botao Count %d\n",manual_count);
-    }
+    init();
+    button.Subir(&PressButton);
+    button.Descer(&ReleaseButton);
 }
 
-void transitionState(){
-    Padrao();
-    if(current_state == START && previe_state == START){
-        printf("Vermelho init\n");
-        LedVermelho = 1;
-        previe_state = Vermelho;
-        current_state = Vermelho;
-        timeout.attach(&transitionState, 10);
-    }
-    else if(stateButton == OFF){
-        if(current_state == Vermelho){
-            MudarAzul();
-        }
-        else if(current_state == Azul){
-            MudarAmarelo();
-        }
-        else if(current_state == Amarelo){
-            MudarVermelho();
-        }
-    }
-    else if(stateButton == ON){
-        stateButton = OFF;
-        if(current_state == Vermelho){
-            if(manual_count>=3 && manual_count<=10){
-                MudarAlerta();
-            }
-            else if(manual_count > 10){
-                Desligar();
-            }
-            else{
-                MudarVermelho();
-            }
-        }
-        else if(current_state == Amarelo){
-            if(manual_count>=3 && manual_count<=10){
-                MudarAlerta();
-            }
-            else if(manual_count > 10){
-                Desligar();
-            }
-            else{
-                MudarAmarelo();
-            }
-        }
-        else if(current_state == Azul){
-            if(manual_count>=3 && manual_count<=10){
-                MudarAlerta();
-            }
-            else if(manual_count==20 || manual_count<=3){
-                MudarAmarelo();
-            }
-            else if(manual_count>10){
-                Desligar();
-            }
-            else{
-                MudarAzul();
-            }
-        }
-        else if(current_state == ALERT){
-            if(manual_count>=3 && manual_count<=10){
-                if(previe_state == Vermelho){
-                    MudarVermelho();
+void transitionStatePress(){
+    timeout.attach(&ledBlink, 0.1);
+    if(stateButton){
+        switch (current_state){
+            case Cima:
+                current_state = Subir;
+                printf("Subir\n");
+                break;
+            case Baixo:
+                current_state = Descer;
+                printf("Descer\n");
+                break;
+            case Descer:
+                if(Intensidade==0.0){
+                    current_state = MIN;
+                    printf("MIN\n");
+                }else{
+                    Intensidade = Intensidade - 0.05;
+                    printf("Intensidade: %.2f\n",Intensidade.read());
                 }
-                else if(previe_state == Amarelo){
-                    MudarAmarelo();
+                break;
+            case Subir:
+                if(Intensidade==1.0){
+                    current_state = MAX;
+                    printf("MAX\n");
+                }else{
+                    Intensidade = Intensidade + 0.05;
+                    printf("Intensidade: %.2f\n",Intensidade.read());
                 }
-                else{
-                    MudarAzul();
+                break;
+            default:
+                if (Intensidade >= 1.0) {
+                    current_state = MAX;
+                    printf("MAX\n");
+                } else if (Intensidade <= 0.0) {
+                        current_state = MIN;
+                        printf("MIN\n");
                 }
-            }
-            else if(manual_count > 10){
-                Desligar();
-            }
-            else{
-                current_state = previe_state;
-                MudarAlerta();
-            }
-        }
-        else if(current_state == OFF){
-            if(manual_count > 10){
-                MudarVermelho();
-            }
-            else{
-                Desligar();
-            }
+                break;
         }
     }
 }
 
-void Padrao()
+void init(){
+    LedAzul = 1.0;
+    LedVermelho = 0.0;
+    Intensidade = 1.0;
+    current_state = Cima;
+    printf("Cima\n");
+}
+
+void PressButton()
 {
-  LedVermelho = 0;
-  LedAmarelo = 0;
-  LedAzul = 0;
-  
-  timeout.detach();
-  ticker.detach();
+    printf("Press Button\n");
+    stateButton = true;
+    ticker.attach(&transitionStatePress,1.0);
+}
+
+void ReleaseButton()
+{
+    printf("Release Button\n");
+    stateButton = false;
+    ticker.detach();
+    if(current_state == MAX || current_state == Cima || current_state == Descer){
+        if(Intensidade > 0.0){
+            LedAzul = 0.0;
+            LedVermelho = 1.0;
+            current_state = Baixo;
+            printf("Baixo\n");
+        }
+    }
+    else if(current_state == MIN || current_state == Baixo || current_state == Subir){
+        if(Intensidade < 1.0){
+            LedAzul = 1.0;
+            LedVermelho = 0.0;
+            current_state = Cima;
+            printf("Cima\n");
+        }
+    }
+}
+
+void ledBlink(){
+    switch(current_state){
+        case Descer:
+            frequency = 1;
+            LedVermelho = !LedVermelho;
+            break;
+        case Subir:
+            frequency = 1;
+            LedAzul = !LedAzul;
+            break;
+        case MIN:
+            frequency = 0.1;
+            LedVermelho = !LedVermelho;
+            break;
+        case MAX:
+            frequency = 0.1;
+            LedAzul = !LedAzul;
+            break;
+        default:
+            break;
+    }
+    timeout.attach(&ledBlink, frequency);
 }
