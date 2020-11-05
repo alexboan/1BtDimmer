@@ -20,9 +20,9 @@ void ReleaseButton();
 void transitionStatePress();
 void ledBlink();
 
-int current_state;
+int EstadoAtual;
 bool stateButton;
-float frequency;
+float Frequencia;
 
 int main() {
     init();
@@ -33,18 +33,18 @@ int main() {
 void transitionStatePress(){
     timeout.attach(&ledBlink, 0.1);
     if(stateButton){
-        switch (current_state){
+        switch (EstadoAtual){
             case Cima:
-                current_state = Subir;
+                EstadoAtual = Subir;
                 printf("Subir\n");
                 break;
             case Baixo:
-                current_state = Descer;
+                EstadoAtual = Descer;
                 printf("Descer\n");
                 break;
             case Descer:
                 if(Intensidade==0.0){
-                    current_state = MIN;
+                    EstadoAtual = MIN;
                     printf("MIN\n");
                 }else{
                     Intensidade = Intensidade - 0.05;
@@ -53,7 +53,7 @@ void transitionStatePress(){
                 break;
             case Subir:
                 if(Intensidade==1.0){
-                    current_state = MAX;
+                    EstadoAtual = MAX;
                     printf("MAX\n");
                 }else{
                     Intensidade = Intensidade + 0.05;
@@ -62,10 +62,10 @@ void transitionStatePress(){
                 break;
             default:
                 if (Intensidade >= 1.0) {
-                    current_state = MAX;
+                    EstadoAtual = MAX;
                     printf("MAX\n");
                 } else if (Intensidade <= 0.0) {
-                        current_state = MIN;
+                        EstadoAtual = MIN;
                         printf("MIN\n");
                 }
                 break;
@@ -77,7 +77,7 @@ void init(){
     LedAzul = 1.0;
     LedVermelho = 0.0;
     Intensidade = 1.0;
-    current_state = Cima;
+    EstadoAtual = Cima;
     printf("Cima\n");
 }
 
@@ -93,44 +93,44 @@ void ReleaseButton()
     printf("Release Button\n");
     stateButton = false;
     ticker.detach();
-    if(current_state == MAX || current_state == Cima || current_state == Descer){
+    if(EstadoAtual == MAX || EstadoAtual == Cima || EstadoAtual == Descer){
         if(Intensidade > 0.0){
             LedAzul = 0.0;
             LedVermelho = 1.0;
-            current_state = Baixo;
+            EstadoAtual = Baixo;
             printf("Baixo\n");
         }
     }
-    else if(current_state == MIN || current_state == Baixo || current_state == Subir){
+    else if(EstadoAtual == MIN || EstadoAtual == Baixo || EstadoAtual == Subir){
         if(Intensidade < 1.0){
             LedAzul = 1.0;
             LedVermelho = 0.0;
-            current_state = Cima;
+            EstadoAtual = Cima;
             printf("Cima\n");
         }
     }
 }
 
 void ledBlink(){
-    switch(current_state){
+    switch(EstadoAtual){
         case Descer:
-            frequency = 1;
+            Frequencia = 1;
             LedVermelho = !LedVermelho;
             break;
         case Subir:
-            frequency = 1;
+            Frequencia = 1;
             LedAzul = !LedAzul;
             break;
         case MIN:
-            frequency = 0.1;
+            Frequencia = 0.1;
             LedVermelho = !LedVermelho;
             break;
         case MAX:
-            frequency = 0.1;
+            Frequencia = 0.1;
             LedAzul = !LedAzul;
             break;
         default:
             break;
     }
-    timeout.attach(&ledBlink, frequency);
+    timeout.attach(&ledBlink, Frequencia);
 }
